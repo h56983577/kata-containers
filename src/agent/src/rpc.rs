@@ -91,6 +91,8 @@ use std::io::{BufRead, BufReader, Write};
 use std::os::unix::fs::FileExt;
 use std::path::PathBuf;
 
+use kata_types::k8s;
+
 pub const CONTAINER_BASE: &str = "/run/kata-containers";
 const MODPROBE_PATH: &str = "/sbin/modprobe";
 
@@ -224,6 +226,8 @@ impl AgentService {
             }
         };
 
+        let container_name = k8s::container_name(&oci);
+
         info!(sl(), "receive createcontainer, spec: {:?}", &oci);
         info!(
             sl(),
@@ -282,6 +286,7 @@ impl AgentService {
             spec: Some(oci.clone()),
             rootless_euid: false,
             rootless_cgroup: false,
+            container_name,
         };
 
         let mut ctr: LinuxContainer =
@@ -310,6 +315,7 @@ impl AgentService {
         }
 
         s.update_shared_pidns(&ctr)?;
+        s.setup_shared_mounts(&ctr, &req.shared_mounts)?;
         s.add_container(ctr);
         info!(sl(), "created container!");
 
@@ -2035,6 +2041,7 @@ mod tests {
             spec: Some(spec),
             rootless_euid: false,
             rootless_cgroup: false,
+            container_name: "".to_string(),
         }
     }
 
